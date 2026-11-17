@@ -8,6 +8,164 @@ import { getDB, getDefaultOrder, saveDatabase } from "../store/storage.js";
 import { hapticTap, startRestTimer } from "./timer.js";
 
 const openHistoryDrawers = {};
+const openWarmupDrawers = {};
+
+function roundGymWeight(val) {
+    if (isNaN(val) || val <= 0) return 0;
+    if (val < 20) return Math.max(1, Math.round(val));
+    return Math.round(val / 2.5) * 2.5;
+}
+
+export function isWarmupDrawerOpen(wIdx, origIdx, vIdx) {
+    return Boolean(openWarmupDrawers[`${wIdx}_${origIdx}_${vIdx}`]);
+}
+
+export function toggleWarmupDrawer(wIdx, origIdx, vIdx, onRender) {
+    hapticTap(8);
+    const k = `${wIdx}_${origIdx}_${vIdx}`;
+    openWarmupDrawers[k] = !openWarmupDrawers[k];
+    if (typeof onRender === "function") onRender();
+}
+
+/**
+ * Calcule le protocole d'échauffement optimal sans fatigue :
+ * - 1er exercice de la séance (ou 1er exo d'un groupe antagoniste froid) : 2 paliers courts (50% x 6-8 + 80% x 2-3)
+ * - Exercices suivants (muscle et tendon déjà chauds) : 1 micro-série optionnelle de calibrage (70% x 3-4)
+ */
+export function getWarmupPlan(wIdx, origIdx, vIdx, posIdx) {
+    const rec = getRecord(wIdx, origIdx, vIdx);
+    const curKgStr = String(rec.currentSets[0]?.kg || "").replace(",", ".").trim();
+    const lastKgStr = String(rec.lastSets[0]?.kg || "").replace(",", ".").trim();
+    const refKg = parseFloat(curKgStr) || parseFloat(lastKgStr) || 0;
+
+    // Groupe musculaire froid : 1er exo de la séance, ou 1er exo Ischios (Legs pos 1), ou 1er exo Dos en Upper (origIdx 1)
+    const isColdMuscle =
+        posIdx === 0 ||
+        (wIdx === 2 && origIdx === 1) ||
+        (wIdx === 3 && origIdx === 1);
+
+    if (isColdMuscle) {
+        const w50 = refKg > 0 ? `${roundGymWeight(refKg * 0.5)} kg` : "50 % charge";
+        const w80 = refKg > 0 ? `${roundGymWeight(refKg * 0.8)} kg` : "80 % charge";
+        return {
+            isCold: true,
+            title: "🔥 Protocole Chauffe à Froid (2 paliers • Zéro fatigue)",
+            subtitle: refKg > 0
+                ? `Calculé sur ta charge de travail de ${refKg} kg :`
+                : "Saisis ta charge en S1 pour le calcul exact en kg :",
+            steps: [
+                {
+                    badge: "Chauffe 1 (50%)",
+                    load: `${w50} × 6-8 reps`,
+                    desc: "Synovie articulaire & vascularisation",
+                    restLabel: "⏱️ Repos 45s",
+                    restSec: 45
+                },
+                {
+                    badge: "Chauffe 2 (80%)",
+                    load: `${w80} × 2-3 reps MAX`,
+                    desc: "Réveil nerveux & tendineux (zéro acide lactique)",
+                    restLabel: "⏱️ Repos 1m30",
+                    restSec: 90
+                }
+            ]
+        };
+    }
+
+    const w70 = refKg > 0 ? `${roundGymWeight(refKg * 0.7)} kg` : "70 % charge";
+    return {
+        isCold: false,
+        title: "⚡ Muscle déjà chaud (Calibrage optionnel)",
+        subtitle: "Tes tendons et ton système nerveux sont déjà chauds. Ne te fatigue pas :",
+        steps: [
+            {
+                badge: "Calibrage (70%)",
+                load: `${w70} × 3-4 reps`,
+                desc: "Optionnel : juste pour sentir la trajectoire et valider le réglage",
+                restLabel: "⏱️ Repos 1m00",
+                restSec: 60
+            }
+        ]
+    };
+}
+
+/* =========================================================================
+   PROGRESSION DE LA SÉANCE EN DIRECT & DURÉE ÉCOULÉE
+   ========================================================================= */
+export function ensureSessionTimerStarted(wIdx) {
+    const db = getDB();
+    if (!db.sessionStartTimes) db.sessionStartTimes = {};
+    if (!db.sessionStartTimes[wIdx]) {
+        db.sessionStartTimes[wIdx] = Date.now();
+    }
+}
+
+export function resetSessionTimer(wIdx, onRender, showToastFn) {
+    hapticTap(10);
+    const db = getDB();
+    if (db.sessionStartTimes) {
+        delete db.sessionStartTimes[wIdx];
+    }
+    saveDatabase(true);
+    if (typeof onRender === "function") onRender();
+    if (typeof showToastFn === "function") showToastFn("⏱️ Durée de séance réinitialisée");
+}
+
+export function getWorkoutSessionStats(wIdx) {
+    if (wIdx < 0 || wIdx > 3) return null;
+    const db = getDB();
+    const w = WORKOUTS[wIdx];
+    let doneSets = 0;
+    let totalSets = 0;
+
+    w.exercises.forEach((ex, origIdx) => {
+        const vIdx = getVarIdx(wIdx, origIdx);
+        const rec = getRecord(wIdx, origIdx, vIdx);
+        totalSets += ex.numSets;
+        for (let i = 0; i < ex.numSets; i++) {
+            const s = rec.currentSets[i];
+            if (!s) continue;
+            const hasBoth = String(s.kg || "").trim() !== "" && String(s.reps || "").trim() !== "";
+            if (s.done || hasBoth) {
+                doneSets++;
+            }
+        }
+    });
+
+    const pct = totalSets > 0 ? Math.min(100, Math.round((doneSets / totalSets) * 100)) : 0;
+    const startTs = db.sessionStartTimes?.[wIdx] || null;
+    let elapsedMin = null;
+    if (startTs && doneSets > 0) {
+        elapsedMin = Math.max(1, Math.floor((Date.now() - startTs) / 60000));
+    } else if (doneSets === 0 && db.sessionStartTimes?.[wIdx]) {
+        delete db.sessionStartTimes[wIdx];
+    }
+
+    return { doneSets, totalSets, pct, elapsedMin };
+}
+
+export function updateWorkoutProgressDOM(wIdx) {
+    const stats = getWorkoutSessionStats(wIdx);
+    if (!stats) return;
+    const lblEl = document.getElementById("session-progress-lbl");
+    const barEl = document.getElementById("session-progress-fill");
+    const durEl = document.getElementById("session-duration-pill");
+    if (lblEl) {
+        lblEl.textContent = `📊 ${stats.doneSets} / ${stats.totalSets} séries (${stats.pct} %)`;
+    }
+    if (barEl) {
+        barEl.style.width = `${stats.pct}%`;
+    }
+    if (durEl) {
+        if (stats.elapsedMin !== null) {
+            durEl.style.display = "inline-flex";
+            const txt = durEl.querySelector(".dur-txt");
+            if (txt) txt.textContent = `⏱️ ${stats.elapsedMin} min`;
+        } else {
+            durEl.style.display = "none";
+        }
+    }
+}
 
 export function getVarIdx(wIdx, origIdx) {
     const db = getDB();
@@ -159,6 +317,10 @@ export function handleSetInput(wIdx, origIdx, vIdx, sIdx, field, value) {
     const rec = getRecord(wIdx, origIdx, vIdx);
     rec.currentSets[sIdx][field] = value;
 
+    if (String(value || "").trim() !== "") {
+        ensureSessionTimerStarted(wIdx);
+    }
+
     // Si l'utilisateur modifie les KG de S1, on met à jour le placeholder des séries suivantes si elles sont vides
     if (field === "kg" && sIdx === 0) {
         const cleanVal = value.trim();
@@ -172,6 +334,7 @@ export function handleSetInput(wIdx, origIdx, vIdx, sIdx, field, value) {
     }
 
     saveDatabase(true);
+    updateWorkoutProgressDOM(wIdx);
 
     const scEl = document.getElementById(`sc-summary-${wIdx}-${origIdx}`);
     if (scEl) {
@@ -193,6 +356,7 @@ export function toggleSetDone(wIdx, origIdx, vIdx, sIdx, onRender, showToastFn) 
 
     if (!curSet.done) {
         curSet.done = true;
+        ensureSessionTimerStarted(wIdx);
 
         // Auto-complétion intelligente si le champ KG est vide
         if (!String(curSet.kg || "").trim()) {
@@ -363,6 +527,11 @@ export function archiveWorkoutSession(wIdx, onRender, showToastFn) {
             showToastFn("⚠️ Saisissez ou validez au moins une série avant d'archiver");
         }
         return;
+    }
+
+    const db = getDB();
+    if (db.sessionStartTimes) {
+        delete db.sessionStartTimes[wIdx];
     }
 
     hapticTap(25);

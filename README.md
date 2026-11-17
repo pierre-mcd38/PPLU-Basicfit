@@ -13,9 +13,11 @@ Contrairement aux applications commerciales lourdes qui imposent une création d
 - **Saisie directe sans rechargement** : Les champs de poids (`KG`) et de répétitions (`REPS`) ouvrent directement le pavé numérique mobile et enregistrent chaque frappe en temps réel sans jamais fermer le clavier.
 - **Système de variantes intégré (`Principal`, `V1`, `V2`)** : Si une machine est occupée en salle, un simple clic permet de basculer sur une variante équivalente. Chaque variante possède sa propre mémoire de charges, ses propres notes et son propre historique.
 - **Réorganisation à la volée (`↑` / `↓`)** : L'ordre des exercices d'une séance peut être modifié en direct selon la disponibilité du matériel, avec possibilité de rétablir l'ordre par défaut en un clic.
+- **Barre de progression de séance & Durée en direct** : Le sous-en-tête de chaque séance affiche en temps réel le nombre de séries validées (`📊 X / 18 séries`), une jauge visuelle d'avancement et le temps écoulé depuis le début de l'entraînement (`⏱️ XX min`).
 - **Mode « Screen » (Vue condensée 1 écran)** : Un bouton dédié masque les grilles de saisie pour condenser l'intégralité de la séance, des prises et des performances sur un seul écran sans avoir à défiler.
 
-### 2. Un suivi intelligent de la progression
+### 2. Un suivi intelligent de la progression & de l'échauffement
+- **Calculateur d'échauffement intelligent (`🔥 Chauffe`)** : Adapte automatiquement le protocole de chauffe selon que le groupe musculaire est froid (début de séance : 2 paliers courts à `50 % × 6-8 reps` puis `80 % × 2-3 reps` pour réveiller le système nerveux et les tendons sans fatigue lactique) ou déjà chaud (1 micro-série optionnelle de calibrage à `70 % × 3-4 reps`), avec lancement direct des temps de repos courts (`45s`, `1m00`, `1m30`).
 - **Coach de Surcharge Progressive automatique (Double Progression)** : L'application analyse automatiquement les performances de la dernière séance par rapport à la fourchette cible de l'exercice et affiche l'objectif du jour :
   - **`🚀 Objectif : Monte à +2.5 kg`** lorsque le haut de la fourchette de répétitions a été validé sur toutes les séries.
   - **`🎯 Objectif : Garde la charge & vise +1 rep`** tant que la progression est en cours dans la fourchette.

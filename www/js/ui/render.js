@@ -39,6 +39,11 @@ import {
     clearCurrentExerciseSets,
     isHistoryDrawerOpen,
     toggleHistoryDrawer,
+    isWarmupDrawerOpen,
+    toggleWarmupDrawer,
+    getWarmupPlan,
+    getWorkoutSessionStats,
+    resetSessionTimer,
     restoreHistoryEntry,
     deleteHistoryEntry,
     archiveWorkoutSession,
@@ -524,9 +529,10 @@ export function render() {
     const w = WORKOUTS[activeTab];
     const order = getWorkoutOrder(activeTab);
     const hasCustomOrd = isCustomOrder(activeTab);
+    const sessionStats = getWorkoutSessionStats(activeTab);
 
     mainEl.innerHTML = `
-        <!-- SOUS-EN-TÊTE SÉANCE AVEC BOUTON VALIDER & ARCHIVER -->
+        <!-- SOUS-EN-TÊTE SÉANCE AVEC BOUTON VALIDER & ARCHIVER + PROGRESSION EN DIRECT -->
         <div class="workout-subheader">
             <div>
                 <h1 class="workout-subheader-title">${w.title}</h1>
@@ -546,6 +552,22 @@ export function render() {
                     ✅ Valider & Archiver
                 </button>
             </div>
+
+            <!-- BARRE DE PROGRESSION DE LA SÉANCE & DURÉE ÉCOULÉE -->
+            <div class="session-progress-bar-wrap">
+                <div class="session-stats-row">
+                    <span id="session-progress-lbl" class="session-progress-lbl">
+                        📊 ${sessionStats.doneSets} / ${sessionStats.totalSets} séries (${sessionStats.pct} %)
+                    </span>
+                    <span id="session-duration-pill" class="session-duration-pill" style="display:${sessionStats.elapsedMin !== null ? "inline-flex" : "none"};">
+                        <span class="dur-txt">⏱️ ${sessionStats.elapsedMin || 1} min</span>
+                        <button type="button" data-action="reset-session-timer" data-widx="${activeTab}" style="color:#94a3b8; font-size:10px; font-weight:900; padding-left:3px;" title="Réinitialiser la durée">↺</button>
+                    </span>
+                </div>
+                <div class="session-progress-track">
+                    <div id="session-progress-fill" class="session-progress-fill" style="width:${sessionStats.pct}%;"></div>
+                </div>
+            </div>
         </div>
 
         <!-- PILE DES CARTES EXERCICES -->
@@ -561,6 +583,8 @@ export function render() {
                     const hasCurData = hasAnySetData(rec.currentSets);
                     const screenPerfStr = getScreenModePerfString(activeTab, origIdx, vIdx);
                     const isHistoryOpen = isHistoryDrawerOpen(activeTab, origIdx, vIdx);
+                    const isWarmupOpen = isWarmupDrawerOpen(activeTab, origIdx, vIdx);
+                    const warmupPlan = isWarmupOpen ? getWarmupPlan(activeTab, origIdx, vIdx, posIdx) : null;
 
                     return `
                     <article class="card-ex">
@@ -591,12 +615,15 @@ export function render() {
                             </div>
                         </div>
 
-                        <!-- SPECS : SÉRIES / RIR / REPOS CLIQUABLE -->
+                        <!-- SPECS : SÉRIES / RIR / REPOS CLIQUABLE / CHAUFFE -->
                         <div class="specs-bar">
                             <span class="spec-sets">${ex.sets}</span>
                             <span class="spec-rir">${ex.rir}</span>
                             <button data-action="start-timer" data-secs="${ex.restSec}" class="spec-rest-btn">
                                 ⏱️ Repos ${ex.rest}
+                            </button>
+                            <button data-action="toggle-warmup" data-widx="${activeTab}" data-orig="${origIdx}" data-vidx="${vIdx}" class="spec-warmup-btn hide-on-screen ${isWarmupOpen ? "active" : ""}">
+                                🔥 Chauffe
                             </button>
                         </div>
 
@@ -604,6 +631,36 @@ export function render() {
                         <div class="grip-callout">
                             ✋ Prise : <strong>${curVar.grip}</strong>
                         </div>
+
+                        ${
+                            isWarmupOpen && warmupPlan
+                                ? `
+                        <!-- PANNEAU CHAUFFE INTELLIGENT -->
+                        <div class="hide-on-screen warmup-panel">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+                                <strong style="font-size:11.5px; color:#fcd34d;">${warmupPlan.title}</strong>
+                            </div>
+                            <div style="font-size:11px; color:var(--text-muted);">${warmupPlan.subtitle}</div>
+                            ${warmupPlan.steps
+                                .map(
+                                    st => `
+                                <div class="warmup-row">
+                                    <div>
+                                        <span style="font-size:11px; font-weight:900; color:var(--amber);">${st.badge} :</span>
+                                        <strong style="font-size:12px; color:#ffffff; font-family:var(--font-mono); margin-left:4px;">${st.load}</strong>
+                                        <div style="font-size:10.5px; color:var(--text-muted);">${st.desc}</div>
+                                    </div>
+                                    <button data-action="start-timer" data-secs="${st.restSec}" class="spec-rest-btn">
+                                        ${st.restLabel}
+                                    </button>
+                                </div>
+                            `
+                                )
+                                .join("")}
+                        </div>
+                        `
+                                : ""
+                        }
 
                         <!-- BLOC DE SUIVI DES CHARGES (MASQUÉ EN MODE SCREEN) -->
                         <div class="hide-on-screen perf-panel">
@@ -907,6 +964,17 @@ export function bindDOMEvents() {
                     Number(btn.dataset.vidx),
                     render
                 );
+                break;
+            case "toggle-warmup":
+                toggleWarmupDrawer(
+                    Number(btn.dataset.widx),
+                    Number(btn.dataset.orig),
+                    Number(btn.dataset.vidx),
+                    render
+                );
+                break;
+            case "reset-session-timer":
+                resetSessionTimer(Number(btn.dataset.widx), render, showToast);
                 break;
             case "restore-history":
                 restoreHistoryEntry(

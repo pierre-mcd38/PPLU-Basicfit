@@ -18,6 +18,7 @@ export function createEmptyDB() {
         version: 6,
         updatedAt: 0,
         selectedVariants: {},
+        sessionStartTimes: {},
         exerciseOrder: {
             0: [0, 1, 2, 3, 4, 5],
             1: [0, 1, 2, 3, 4, 5],
@@ -89,6 +90,9 @@ export function normalizeDB(data) {
     migrateLegacyV5ToV6(data);
     if (!data.selectedVariants || typeof data.selectedVariants !== "object") {
         data.selectedVariants = {};
+    }
+    if (!data.sessionStartTimes || typeof data.sessionStartTimes !== "object") {
+        data.sessionStartTimes = {};
     }
     if (!data.records || typeof data.records !== "object") {
         data.records = {};
