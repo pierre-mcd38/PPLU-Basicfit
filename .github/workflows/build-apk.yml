@@ -1,0 +1,83 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js v20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      - name: Install dependencies & Sync Capacitor Android
+        run: |
+          npm install
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+          npx cap sync android
+
+      - name: Ensure AndroidManifest permissions (WAKE_LOCK & VIBRATE)
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if [ -f "$MANIFEST" ]; then
+            grep -q "android.permission.WAKE_LOCK" "$MANIFEST" || sed -i 's|<application|    <uses-permission android:name="android.permission.WAKE_LOCK" />\n    <application|' "$MANIFEST"
+            grep -q "android.permission.VIBRATE" "$MANIFEST" || sed -i 's|<application|    <uses-permission android:name="android.permission.VIBRATE" />\n    <application|' "$MANIFEST"
+          fi
+
+      - name: Compile Debug APK with Gradle
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK to GitHub Actions Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPLU-BasicFit-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Publish Ready-to-Install APK to GitHub Releases
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        continue-on-error: true
+        with:
+          tag_name: latest-apk
+          name: "📱 PPLU Basic-Fit Android APK (Dernière Version)"
+          body: |
+            Téléchargez directement **`app-debug.apk`** ci-dessous sur votre smartphone Android pour installer l'application **PPLU Basic-Fit Hypertrophie & Tracker** (100 % hors-ligne).
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          prerelease: false
+
+          if-no-files-found: error
+
+      - name: Publish Ready-to-Install APK to GitHub Releases
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        continue-on-error: true
+        with:
+          tag_name: latest-apk
+          name: "📱 PPLU Basic-Fit Android APK (Dernière Version)"
+          body: |
+            Téléchargez directement **`app-debug.apk`** ci-dessous sur votre smartphone Android pour installer l'application **PPLU Basic-Fit Hypertrophie & Tracker** (100 % hors-ligne).
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          prerelease: false

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0b0d11">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>PPLU Basic-Fit • App Hypertrophie &amp; Tracker</title>
+
+    <link rel="manifest" href="./manifest.json">
+    <link rel="stylesheet" href="./css/variables.css">
+    <link rel="stylesheet" href="./css/layout.css">
+    <link rel="stylesheet" href="./css/components.css">
+</head>
+<body>
+
+    <!-- TOAST DE NOTIFICATION FLOTTANT -->
+    <div id="toast" class="toast-floating" role="status" aria-live="polite">
+        <div class="toast-pill">
+            <span style="width:8px; height:8px; border-radius:99px; background:var(--accent);"></span>
+            <span id="toast-message">Sauvegardé</span>
+        </div>
+    </div>
+
+    <!-- INPUT FILE CACHÉ POUR IMPORT JSON -->
+    <input type="file" id="json-file-input" accept=".json,application/json" class="hidden">
+
+    <!-- TOP HEADER COMPACT (STICKY Z-INDEX 30) -->
+    <header class="app-header">
+        <div class="app-container header-inner">
+            <div class="header-left">
+                <div class="brand-pill">
+                    <span id="save-dot" class="save-dot" title="Auto-Save actif"></span>
+                    <span id="header-screen-title">1. PUSH</span>
+                </div>
+                <button id="wakelock-btn" data-action="toggle-wakelock" class="btn-wakelock" title="Maintenir l'écran allumé en séance">
+                    <span id="wakelock-icon">🔓</span>
+                    <span class="hide-xs" id="wakelock-text">Auto-Save</span>
+                </button>
+            </div>
+
+            <div class="header-right">
+                <button id="screenModeBtn" data-action="toggle-screen-mode" class="btn-top-action" title="Mode Screen condensé sur 1 écran">
+                    <span>📱</span><span class="hide-xs">Screen</span>
+                </button>
+                <button data-action="open-story-modal" class="btn-top-action story" title="Visionneuse Fiche Story PNG 9:16">
+                    <span>📸</span><span>Fiche 9:16</span>
+                </button>
+                <button data-action="download-all-pngs" class="btn-top-action" title="Télécharger / Partager les 4 fiches PNG 9:16">
+                    <span>🗂️</span><span class="hide-xs">4 PNG</span>
+                </button>
+                <button data-action="download-zip" class="btn-top-action zip" title="Exporter l'archive .ZIP">
+                    <span>📦</span><span>.ZIP</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENU PRINCIPAL DANS LE FLUX NATUREL DU DOCUMENT -->
+    <div class="app-container">
+        <main id="mainContent"></main>
+    </div>
+
+    <!-- VISIONNEUSE NATIVE STORY PNG 9:16 (1080×1920) -->
+    <div id="storyModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="storyModalTitle">
+        <div class="modal-sheet">
+            <div class="modal-top">
+                <div id="storyModalTitle" style="font-size:13px; font-weight:900; color:#fff;">📸 Fiche Story HD (1080×1920)</div>
+                <button data-action="close-story-modal" style="font-size:14px; font-weight:900; color:var(--text-muted); padding:2px 6px;" aria-label="Fermer">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="storyTabs" style="display:grid; grid-template-columns:repeat(4,1fr); gap:5px;"></div>
+
+                <img id="storyPreviewImg" class="story-preview-img" alt="Fiche Séance 9:16">
+
+                <p style="font-size:11px; color:#34d399; text-align:center; font-weight:700;">
+                    Appuyez sur « Partager / Galerie » sur Android pour enregistrer ou envoyer la fiche HD.
+                </p>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <button data-action="share-current-story" class="btn-block sky">
+                        📤 Partager / Galerie
+                    </button>
+                    <button data-action="download-current-story" class="btn-block orange">
+                        ⬇️ Télécharger PNG
+                    </button>
+                </div>
+                <button data-action="download-all-pngs" class="btn-block emerald">
+                    🗂️ Télécharger / Partager le Pack des 4 Fiches PNG
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE RESTAURER UN CODE DE SAUVEGARDE JSON -->
+    <div id="pasteModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pasteModalTitle">
+        <div class="modal-sheet">
+            <div class="modal-top">
+                <h3 id="pasteModalTitle" style="font-size:14px; font-weight:900; color:#fff;">📥 Restaurer un Code de Sauvegarde</h3>
+                <button data-action="close-paste-modal" style="color:var(--text-muted); font-weight:900; font-size:14px;" aria-label="Fermer">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:12px; color:var(--text-muted);">Collez ci-dessous le texte JSON copié depuis une sauvegarde précédente :</p>
+                <textarea id="pasteTextarea" rows="6" style="width:100%; border-radius:10px; background:var(--bg); border:1px solid var(--border); padding:10px; font-size:11.5px; font-family:var(--font-mono); color:#fff; outline:none;" placeholder='{"version":5,"selectedVariants":...}'></textarea>
+                <div style="display:flex; justify-content:flex-end; gap:8px;">
+                    <button data-action="close-paste-modal" class="btn-top-action">Annuler</button>
+                    <button data-action="confirm-paste-restore" class="btn-top-action archive" style="padding:0 14px;">Restaurer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PILULE CHRONOMÈTRE DE REPOS FLOTTANTE (FIXED BOTTOM, Z-INDEX 39) -->
+    <div id="floating-timer-pill">
+        <div class="timer-pill-wrap">
+            <div id="timer-pill-box" class="timer-pill">
+                <div class="timer-bar-track">
+                    <div id="timer-progress" class="timer-bar-fill"></div>
+                </div>
+                <div class="timer-pill-content">
+                    <div class="timer-status-left">
+                        <button id="timer-play-btn" data-action="toggle-timer" class="btn-timer-toggle" aria-label="Lecture / Pause">▶</button>
+                        <div>
+                            <span id="timer-label" class="timer-state-lbl">Chrono Repos</span>
+                            <span id="timer-display" class="timer-clock">00:00</span>
+                        </div>
+                    </div>
+                    <div class="timer-chips">
+                        <button data-action="adjust-timer" data-delta="-15" class="t-chip">-15s</button>
+                        <button data-action="start-timer" data-secs="90" class="t-chip">1m30</button>
+                        <button data-action="start-timer" data-secs="120" class="t-chip">2m00</button>
+                        <button data-action="start-timer" data-secs="150" class="t-chip">2m30</button>
+                        <button data-action="start-timer" data-secs="180" class="t-chip">3m00</button>
+                        <button data-action="adjust-timer" data-delta="15" class="t-chip">+15s</button>
+                        <button data-action="reset-timer" class="t-chip reset" aria-label="Réinitialiser">✕</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BARRE DE NAVIGATION FIXE EN BAS AU POUCE (FIXED BOTTOM 0, Z-INDEX 40) -->
+    <nav class="bottom-nav" id="bottomNav" aria-label="Navigation principale"></nav>
+
+    <!-- POINT D'ENTRÉE ES6 MODULAIRE -->
+    <script type="module" src="./js/app.js"></script>
+</body>
+</html>

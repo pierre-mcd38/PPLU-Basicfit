@@ -1,0 +1,26 @@
+{
+  "name": "PPLU Basic-Fit • Hypertrophie & Tracker",
+  "short_name": "PPLU Basic-Fit",
+  "description": "Programme PPLU 4 jours (Schoenfeld / Israetel) & Suivi Hypertrophie 100% Hors-Ligne",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0d11",
+  "theme_color": "#0b0d11",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%230b0d11'/%3E%3Crect x='12' y='12' width='168' height='168' rx='32' fill='%23141820' stroke='%23ff6b00' stroke-width='6'/%3E%3Ctext x='96' y='118' font-family='sans-serif' font-size='72' font-weight='900' fill='%23ff6b00' text-anchor='middle'%3EPPLU%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230b0d11'/%3E%3Crect x='28' y='28' width='456' height='456' rx='84' fill='%23141820' stroke='%23ff6b00' stroke-width='14'/%3E%3Ctext x='256' y='310' font-family='sans-serif' font-size='180' font-weight='900' fill='%23ff6b00' text-anchor='middle'%3EPPLU%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

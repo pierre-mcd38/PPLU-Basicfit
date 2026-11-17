@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Android Gradle build outputs & local machine paths
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/local.properties
+*.iml
+.idea/
+.DS_Store

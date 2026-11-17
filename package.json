@@ -1,0 +1,17 @@
+{
+  "name": "pplu-basicfit-app",
+  "version": "2.0.0",
+  "description": "Application Android PPLU Basic-Fit Hypertrophie & Tracker (Architecture Modulaire)",
+  "scripts": {
+    "cap:init": "npx cap add android",
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/filesystem": "^6.0.0",
+    "@capacitor/share": "^6.0.0"
+  }
+}
