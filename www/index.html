@@ -23,8 +23,8 @@
         </div>
     </div>
 
-    <!-- INPUT FILE CACHÉ POUR IMPORT JSON -->
-    <input type="file" id="json-file-input" accept=".json,application/json" class="hidden">
+    <!-- INPUT FILE CACHÉ POUR IMPORT JSON OU ANCIEN HTML AUTO-PORTEUR -->
+    <input type="file" id="json-file-input" accept=".json,.html,application/json,text/html" class="hidden">
 
     <!-- TOP HEADER COMPACT (STICKY Z-INDEX 30) -->
     <header class="app-header">
@@ -36,22 +36,16 @@
                 </div>
                 <button id="wakelock-btn" data-action="toggle-wakelock" class="btn-wakelock" title="Maintenir l'écran allumé en séance">
                     <span id="wakelock-icon">🔓</span>
-                    <span class="hide-xs" id="wakelock-text">Auto-Save</span>
+                    <span class="hide-xs" id="wakelock-text">Écran auto</span>
                 </button>
             </div>
 
             <div class="header-right">
                 <button id="screenModeBtn" data-action="toggle-screen-mode" class="btn-top-action" title="Mode Screen condensé sur 1 écran">
-                    <span>📱</span><span class="hide-xs">Screen</span>
+                    <span>📱</span><span>Screen</span>
                 </button>
                 <button data-action="open-story-modal" class="btn-top-action story" title="Visionneuse Fiche Story PNG 9:16">
                     <span>📸</span><span>Fiche 9:16</span>
-                </button>
-                <button data-action="download-all-pngs" class="btn-top-action" title="Télécharger / Partager les 4 fiches PNG 9:16">
-                    <span>🗂️</span><span class="hide-xs">4 PNG</span>
-                </button>
-                <button data-action="download-zip" class="btn-top-action zip" title="Exporter l'archive .ZIP">
-                    <span>📦</span><span>.ZIP</span>
                 </button>
             </div>
         </div>

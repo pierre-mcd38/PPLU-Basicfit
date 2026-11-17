@@ -30,8 +30,10 @@ import {
     getRecord,
     formatSetsSummary,
     hasAnySetData,
+    getProgressionAdvice,
     getScreenModePerfString,
     handleSetInput,
+    toggleSetDone,
     handleNoteInput,
     prefillFromLastSession,
     clearCurrentExerciseSets,
@@ -555,6 +557,7 @@ export function render() {
                     const curVar = ex.variants[vIdx];
                     const rec = getRecord(activeTab, origIdx, vIdx);
                     const lastSummary = formatSetsSummary(rec.lastSets);
+                    const progAdvice = getProgressionAdvice(activeTab, origIdx, vIdx);
                     const hasCurData = hasAnySetData(rec.currentSets);
                     const screenPerfStr = getScreenModePerfString(activeTab, origIdx, vIdx);
                     const isHistoryOpen = isHistoryDrawerOpen(activeTab, origIdx, vIdx);
@@ -631,23 +634,42 @@ export function render() {
                                 </div>
                             </div>
 
-                            <!-- GRILLE DES SÉRIES -->
-                            <div class="sets-grid ${ex.numSets === 4 ? "cols-4" : ""}">
+                            ${
+                                progAdvice
+                                    ? `<div class="prog-banner ${progAdvice.type}">${progAdvice.text}</div>`
+                                    : ""
+                            }
+
+                            <!-- GRILLE DES 3 SÉRIES EFFECTIVES -->
+                            <div class="sets-grid">
                                 ${Array.from({ length: ex.numSets })
                                     .map((_, sIdx) => {
-                                        const curSet = rec.currentSets[sIdx] || { kg: "", reps: "" };
+                                        const curSet = rec.currentSets[sIdx] || { kg: "", reps: "", done: false };
                                         const lastSet = rec.lastSets[sIdx] || { kg: "", reps: "" };
-                                        const kgPh = lastSet.kg ? `${lastSet.kg}` : "kg";
+                                        const s1Kg = sIdx > 0 ? String(rec.currentSets[0]?.kg || "").trim() : "";
+                                        const kgPh = s1Kg ? s1Kg : lastSet.kg ? `${lastSet.kg}` : "kg";
                                         const repsPh = lastSet.reps ? `${lastSet.reps}` : "reps";
+                                        const isDone = Boolean(curSet.done);
                                         return `
-                                        <div class="set-box">
+                                        <div class="set-box ${isDone ? "done" : ""}">
                                             <div class="set-box-top">
                                                 <span>S${sIdx + 1}</span>
                                                 ${lastSet.kg || lastSet.reps ? `<span class="set-last-hint">${lastSet.kg || 0}×${lastSet.reps || 0}</span>` : ""}
+                                                <button
+                                                    type="button"
+                                                    data-action="toggle-set-done"
+                                                    data-widx="${activeTab}"
+                                                    data-orig="${origIdx}"
+                                                    data-vidx="${vIdx}"
+                                                    data-sidx="${sIdx}"
+                                                    class="btn-set-check ${isDone ? "done" : ""}"
+                                                    title="Valider la série S${sIdx + 1} et lancer le repos (${ex.rest})"
+                                                >✓</button>
                                             </div>
                                             <div class="set-pair">
                                                 <div>
                                                     <input
+                                                        id="inp-kg-${activeTab}-${origIdx}-${sIdx}"
                                                         type="text"
                                                         inputmode="decimal"
                                                         value="${escapeAttr(curSet.kg)}"
@@ -664,6 +686,7 @@ export function render() {
                                                 </div>
                                                 <div>
                                                     <input
+                                                        id="inp-reps-${activeTab}-${origIdx}-${sIdx}"
                                                         type="text"
                                                         inputmode="decimal"
                                                         value="${escapeAttr(curSet.reps)}"
@@ -848,6 +871,16 @@ export function bindDOMEvents() {
                 break;
             case "archive-session":
                 archiveWorkoutSession(Number(btn.dataset.widx), render, showToast);
+                break;
+            case "toggle-set-done":
+                toggleSetDone(
+                    Number(btn.dataset.widx),
+                    Number(btn.dataset.orig),
+                    Number(btn.dataset.vidx),
+                    Number(btn.dataset.sidx),
+                    render,
+                    showToast
+                );
                 break;
             case "prefill-sets":
                 prefillFromLastSession(

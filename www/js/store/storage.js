@@ -15,7 +15,7 @@ export function getDefaultOrder(wIdx) {
 
 export function createEmptyDB() {
     return {
-        version: 5,
+        version: 6,
         updatedAt: 0,
         selectedVariants: {},
         exerciseOrder: {
@@ -28,8 +28,65 @@ export function createEmptyDB() {
     };
 }
 
+/**
+ * Migre automatiquement une sauvegarde issue de l'ancienne version (v5 monolithique)
+ * vers le nouveau référentiel d'exercices et variantes optimisé (v6).
+ */
+function migrateLegacyV5ToV6(data) {
+    if (!data || typeof data !== "object" || (data.version && data.version >= 6)) {
+        return data;
+    }
+
+    const oldRec = data.records || {};
+    const newRec = { ...oldRec };
+
+    const remapRecordKey = pairs => {
+        const snapshot = {};
+        pairs.forEach(([fromKey]) => {
+            if (oldRec[fromKey] !== undefined) {
+                snapshot[fromKey] = JSON.parse(JSON.stringify(oldRec[fromKey]));
+                delete newRec[fromKey];
+            }
+        });
+        pairs.forEach(([fromKey, toKey]) => {
+            if (snapshot[fromKey] !== undefined) {
+                newRec[toKey] = snapshot[fromKey];
+            }
+        });
+    };
+
+    // 1. PUSH : inversion Ex 1 (Haut Pecs) <-> Ex 2 (Shoulder Press) + Écarté poulie en Principal
+    remapRecordKey([
+        ["0_2_0", "0_1_0"],
+        ["0_2_1", "0_1_1"],
+        ["0_2_2", "0_1_2"],
+        ["0_1_1", "0_2_0"],
+        ["0_1_0", "0_2_1"],
+        ["0_1_2", "0_2_2"]
+    ]);
+
+    // 2. PULL : inversion V1 <-> V2 sur Tirage vertical (Ex 0)
+    remapRecordKey([
+        ["1_0_1", "1_0_2"],
+        ["1_0_2", "1_0_1"]
+    ]);
+
+    // 3. UPPER : Développé incliné haltères passé en Principal (0 <-> 2) & Élévations latérales (1 <-> 2)
+    remapRecordKey([
+        ["3_0_0", "3_0_2"],
+        ["3_0_2", "3_0_0"],
+        ["3_4_1", "3_4_2"],
+        ["3_4_2", "3_4_1"]
+    ]);
+
+    data.records = newRec;
+    data.version = 6;
+    return data;
+}
+
 export function normalizeDB(data) {
     if (!data || typeof data !== "object") return createEmptyDB();
+    migrateLegacyV5ToV6(data);
     if (!data.selectedVariants || typeof data.selectedVariants !== "object") {
         data.selectedVariants = {};
     }
@@ -230,23 +287,31 @@ export async function shareOrDownloadJSON(showToastFn) {
 }
 
 /**
- * Import d'une chaîne JSON (depuis un fichier .json ou depuis le presse-papiers)
+ * Import d'une chaîne JSON ou d'un ancien fichier .HTML auto-porteur
  */
-export function importDatabaseFromJSONString(rawJson, onSuccess, showToastFn) {
-    if (!rawJson || !rawJson.trim()) {
+export function importDatabaseFromJSONString(rawInput, onSuccess, showToastFn) {
+    if (!rawInput || !rawInput.trim()) {
         if (showToastFn) showToastFn("⚠️ Fichier ou code JSON vide");
         return false;
     }
+    let jsonCandidate = rawInput.trim();
+
+    // Si l'utilisateur importe un ancien fichier .html auto-porteur contenant window.__INITIAL_DB__ = {...};
+    const htmlMatch = jsonCandidate.match(/window\.__INITIAL_DB__\s*=\s*(\{[\s\S]*?\});\s*<\/script>/i);
+    if (htmlMatch && htmlMatch[1]) {
+        jsonCandidate = htmlMatch[1];
+    }
+
     try {
-        const parsed = JSON.parse(rawJson);
+        const parsed = JSON.parse(jsonCandidate);
         if (!parsed || typeof parsed !== "object" || (!parsed.records && !parsed.selectedVariants)) {
-            if (showToastFn) showToastFn("❌ Format JSON invalide");
+            if (showToastFn) showToastFn("❌ Format de sauvegarde invalide");
             return false;
         }
         db = normalizeDB(parsed);
         saveDatabase(true);
         if (typeof onSuccess === "function") onSuccess(db);
-        if (showToastFn) showToastFn("✅ Sauvegarde restaurée avec succès !");
+        if (showToastFn) showToastFn("✅ Ancienne sauvegarde importée et migrée !");
         return true;
     } catch (e) {
         if (showToastFn) showToastFn("❌ Code JSON invalide ou corrompu");

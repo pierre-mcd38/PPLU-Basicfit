@@ -72,7 +72,7 @@ export function updateWakeLockUI() {
     } else {
         btn.className = "btn-wakelock";
         icn.textContent = "🔓";
-        txt.textContent = "Auto-Save";
+        txt.textContent = "Écran auto";
     }
 }
 
